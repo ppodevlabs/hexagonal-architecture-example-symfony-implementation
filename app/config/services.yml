@@ -1,0 +1,63 @@
+# Learn more about services, parameters and containers at
+# https://symfony.com/doc/current/service_container.html
+parameters:
+    #parameter_name: value
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        # automatically injects dependencies in your services
+        autowire: true
+        # automatically registers your services as commands, event subscribers, etc.
+        autoconfigure: true
+        # this means you cannot fetch services directly from the container via $container->get()
+        # if you need to do this, you can override this setting on individual services
+        public: false
+
+    # makes classes in src/AppBundle available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    AppBundle\:
+        resource: '../../src/AppBundle/*'
+        # you can exclude directories or files
+        # but if a service is unused, it's removed anyway
+        exclude: '../../src/AppBundle/{Entity,Tests}'
+
+    # controllers are imported separately to make sure they're public
+    # and have a tag that allows actions to type-hint services
+    AppBundle\Controller\:
+        resource: '../../src/AppBundle/Controller'
+        public: true
+        tags: ['controller.service_arguments']
+
+    # add more services, or override services that need manual wiring
+    # AppBundle\Service\ExampleService:
+    #     arguments:
+    #         $someArgument: 'some_value'
+    AppBundle\Command\CommandBus:
+        public: true
+        arguments:
+            $messageBus: '@simple_bus.command_bus'
+#    AppBundle\Repository\UserRepository:
+#        factory:   ['@doctrine.orm.entity_manager', 'getRepository']
+#        arguments:
+#            - $entityName: 'AppBundle\Entity\User'
+
+    AppBundle\Repository\UserRepository:
+        public: true
+        arguments:
+            - '@doctrine.orm.default_entity_manager'
+
+
+    Voiceworks\:
+        resource: '../../vendor/voiceworks/hexagonal-app-example/src/*'
+        # you can exclude directories or files
+        # but if a service is unused, it's removed anyway
+    Voiceworks\HexagonalApp\Application\CommandHandler\CreateUserCommandHandler:
+        public: true
+        arguments:
+            - '@AppBundle\Repository\UserRepository'
+            - '@Voiceworks\HexagonalApp\Domain\UserManagement\User\UserFactory'
+            - '@Voiceworks\HexagonalApp\Infrastructure\Service\Dispatcher\FakeEventDispatcher'
+            - '@Voiceworks\HexagonalApp\Infrastructure\Service\Mailer\FakeMailer'
+        tags:
+            - { name: command_handler, handles: Voiceworks\HexagonalApp\Application\Command\CreateUserCommand }
